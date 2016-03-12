@@ -16,7 +16,7 @@ It can start a BLE scan with a specified scan interval and scan window
 
 Patches can be found <a href="https://github.com/akinaru/rfdroid-ble-scanparam/blob/master/patch">here</a>
 
-![screenshot](screen/screen.gif)
+![screenshot](screen/screenshot.gif)
 
 ## Build
 
