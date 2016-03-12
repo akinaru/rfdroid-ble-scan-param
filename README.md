@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/akinaru/rfdroid-scanparam.svg?branch=master)](https://travis-ci.org/akinaru/rfdroid-scanparam)
 [![License](http://badge.kloud51.com/pypi/l/html2text.svg)](LICENSE.md)
 
-Modification of <a href="https://github.com/akinaru/RFdroid">RFdroid application</a> to be used with a patched version of AOSP plaform/base & apps/Bluetooth.
+Modification of <a href="https://github.com/akinaru/RFdroid">RFdroid application</a> to be used with a patched version of AOSP `frameworks/base` & `packages/apps/Bluetooth`. This patch is working for API 21+ (tested on branch `android-5.1.1_r30`)
 The patch include addition of the following API : 
 
 in `BluetoothAdapter.java` : 
