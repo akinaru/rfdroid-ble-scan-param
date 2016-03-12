@@ -43,6 +43,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.ProgressBar;
@@ -56,6 +57,7 @@ import com.github.akinaru.rfdroid.adapter.ScanItemArrayAdapter;
 import com.github.akinaru.rfdroid.bluetooth.events.BluetoothEvents;
 import com.github.akinaru.rfdroid.bluetooth.events.BluetoothObject;
 import com.github.akinaru.rfdroid.chart.DataAxisFormatter;
+import com.github.akinaru.rfdroid.constant.JsonConstants;
 import com.github.akinaru.rfdroid.inter.IADListener;
 import com.github.akinaru.rfdroid.inter.IScheduledMeasureListener;
 import com.github.akinaru.rfdroid.menu.MenuUtils;
@@ -68,6 +70,8 @@ import com.github.mikephil.charting.data.BarDataSet;
 import com.github.mikephil.charting.data.BarEntry;
 import com.github.mikephil.charting.formatter.YAxisValueFormatter;
 import com.github.mikephil.charting.interfaces.datasets.IBarDataSet;
+
+import org.adw.library.widgets.discreteseekbar.DiscreteSeekBar;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -88,6 +92,9 @@ public class BtDevicesActivity extends AppCompatActivity implements IADListener,
     private ProgressDialog dialog = null;
 
     private boolean bound = false;
+
+    private final static int DEFAULT_SCAN_INTERVAL = 5000;
+    private final static int DEFAULT_SCAN_WINDOW = 5000;
 
     /**
      * define if bluetooth is enabled on device
@@ -114,10 +121,8 @@ public class BtDevicesActivity extends AppCompatActivity implements IADListener,
 
     private BluetoothObject btDevice = null;
 
-    private TextView lastPacketReceivedTv = null;
-    private TextView samplingTimeTv = null;
-    private TextView totalPacketReceiveTv = null;
-    private TextView averagePacketReceivedTv = null;
+    private TextView scanIntervalTv = null;
+    private TextView scanWindowTv = null;
 
     private SimpleDateFormat sf = new SimpleDateFormat("HH:mm:ss.SSS");
 
@@ -133,10 +138,12 @@ public class BtDevicesActivity extends AppCompatActivity implements IADListener,
     private ScanItemArrayAdapter scanningAdapter = null;
 
     private TextView deviceNameTv = null;
-    private TextView deviceAddressTv = null;
 
     private ImageButton scanImage;
     private ProgressBar progressBar;
+
+    private DiscreteSeekBar mScanIntervalSeekbar;
+    private DiscreteSeekBar mWindowIntervalSeekbar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -145,9 +152,10 @@ public class BtDevicesActivity extends AppCompatActivity implements IADListener,
         setContentView(R.layout.activity_btdevices);
 
         deviceNameTv = (TextView) findViewById(R.id.device_name);
-        deviceAddressTv = (TextView) findViewById(R.id.device_address);
 
         sharedpreferences = getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE);
+        int scanIntervalValue = sharedpreferences.getInt(JsonConstants.BT_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL);
+        int scanWindowValue = sharedpreferences.getInt(JsonConstants.BT_SCAN_WINDOW, DEFAULT_SCAN_WINDOW);
 
         tablelayout = (TableLayout) findViewById(R.id.tablelayout);
 
@@ -230,10 +238,126 @@ public class BtDevicesActivity extends AppCompatActivity implements IADListener,
 
         mChart.setVisibility(View.GONE);
 
-        lastPacketReceivedTv = (TextView) findViewById(R.id.last_packet_received_value);
-        samplingTimeTv = (TextView) findViewById(R.id.sampling_time_value);
-        totalPacketReceiveTv = (TextView) findViewById(R.id.total_packet_received_value);
-        averagePacketReceivedTv = (TextView) findViewById(R.id.average_packet_received_value);
+        mScanIntervalSeekbar = (DiscreteSeekBar) findViewById(R.id.scan_interval_seekbar);
+        mScanIntervalSeekbar.setVisibility(View.GONE);
+        mScanIntervalSeekbar.keepShowingPopup(true);
+
+        mScanIntervalSeekbar.setNumericTransformer(new DiscreteSeekBar.NumericTransformer() {
+            @Override
+            public int transform(int value) {
+                return value * 10;
+            }
+        });
+
+        mScanIntervalSeekbar.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View v, boolean hasFocus) {
+                if (!hasFocus) {
+                    mScanIntervalSeekbar.showFloater(250);
+                }
+            }
+        });
+
+        mScanIntervalSeekbar.setOnProgressChangeListener(new DiscreteSeekBar.OnProgressChangeListener() {
+
+            @Override
+            public void onProgressChanged(DiscreteSeekBar seekBar, int value, boolean fromUser) {
+                if (scanIntervalTv != null)
+                    scanIntervalTv.setText("" + (value * 10));
+            }
+
+            @Override
+            public void onStartTrackingTouch(DiscreteSeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(DiscreteSeekBar seekBar) {
+                //setScanInterval();
+            }
+        });
+
+        mWindowIntervalSeekbar = (DiscreteSeekBar) findViewById(R.id.scan_window_seekbar);
+        mWindowIntervalSeekbar.setVisibility(View.GONE);
+        mWindowIntervalSeekbar.keepShowingPopup(true);
+
+        mWindowIntervalSeekbar.setNumericTransformer(new DiscreteSeekBar.NumericTransformer() {
+            @Override
+            public int transform(int value) {
+                return value * 10;
+            }
+        });
+
+        mWindowIntervalSeekbar.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View v, boolean hasFocus) {
+                if (!hasFocus) {
+                    mWindowIntervalSeekbar.showFloater(250);
+                }
+            }
+        });
+
+        mWindowIntervalSeekbar.setOnProgressChangeListener(new DiscreteSeekBar.OnProgressChangeListener() {
+
+            @Override
+            public void onProgressChanged(DiscreteSeekBar seekBar, int value, boolean fromUser) {
+                if (scanWindowTv != null)
+                    scanWindowTv.setText("" + (value * 10));
+            }
+
+            @Override
+            public void onStartTrackingTouch(DiscreteSeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(DiscreteSeekBar seekBar) {
+                //setWindowInterval();
+            }
+        });
+
+        mScanIntervalSeekbar.setProgress(scanIntervalValue/10);
+        mWindowIntervalSeekbar.setProgress(scanWindowValue/10);
+
+        scanIntervalTv = (TextView) findViewById(R.id.scan_interval_value);
+        scanWindowTv = (TextView) findViewById(R.id.scan_window_value);
+
+        scanIntervalTv.setText("" + scanIntervalValue);
+        scanWindowTv.setText("" + scanWindowValue);
+
+        Button button_stop = (Button) findViewById(R.id.button_stop);
+        Button button_restart_scan = (Button) findViewById(R.id.button_restart_scan);
+
+        button_stop.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (currentService != null && currentService.isScanning()) {
+                    Log.i(TAG, "scanning stopped...");
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            hideProgressBar();
+                            Toast.makeText(BtDevicesActivity.this, "scanning has stopped", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                    currentService.stopScan();
+                }
+            }
+        });
+
+        button_restart_scan.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                currentService.stopScan();
+                Log.i(TAG, "scanning ...");
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(BtDevicesActivity.this, "scanning ...", Toast.LENGTH_SHORT).show();
+                    }
+                });
+                scanningListView.setItemChecked(-1, true);
+                triggerNewScan();
+            }
+        });
 
         initTv();
 
@@ -266,10 +390,6 @@ public class BtDevicesActivity extends AppCompatActivity implements IADListener,
     }
 
     private void initTv() {
-        lastPacketReceivedTv.setText("-");
-        samplingTimeTv.setText("-");
-        averagePacketReceivedTv.setText("-");
-        totalPacketReceiveTv.setText("-");
     }
 
     private void setupDrawerContent(NavigationView navigationView) {
@@ -422,7 +542,6 @@ public class BtDevicesActivity extends AppCompatActivity implements IADListener,
         }
     }
 
-
     /**
      * trigger a BLE scan
      */
@@ -432,10 +551,27 @@ public class BtDevicesActivity extends AppCompatActivity implements IADListener,
 
             showProgressBar();
 
-            Log.i(TAG, "START SCAN");
+            Log.i(TAG, "start scanning...");
 
             currentService.disconnectall();
-            currentService.startScan();
+
+            int scanInterval = DEFAULT_SCAN_INTERVAL;
+            int scanWindow = DEFAULT_SCAN_WINDOW;
+
+            try {
+                if (scanIntervalTv != null)
+                    scanInterval = Integer.parseInt(scanIntervalTv.getText().toString());
+                if (scanWindowTv != null)
+                    scanWindow = Integer.parseInt(scanWindowTv.getText().toString());
+            } catch (NumberFormatException e) {
+                e.printStackTrace();
+            }
+            currentService.startScan(scanInterval, scanWindow);
+
+            SharedPreferences.Editor prefEditor = sharedpreferences.edit();
+            prefEditor.putInt(JsonConstants.BT_SCAN_INTERVAL, scanInterval);
+            prefEditor.putInt(JsonConstants.BT_SCAN_WINDOW, scanWindow);
+            prefEditor.commit();
 
         } else {
             Toast.makeText(BtDevicesActivity.this, "Scanning already engaged...", Toast.LENGTH_SHORT).show();
@@ -598,18 +734,14 @@ public class BtDevicesActivity extends AppCompatActivity implements IADListener,
                     scanningAdapter.notifyDataSetChanged();
 
                     if (deviceNameTv != null) {
-                        deviceNameTv.setText(btDevice.getDeviceName());
+                        deviceNameTv.setText(btDevice.getDeviceName() + " - " + btDevice.getDeviceAddress());
                         deviceNameTv.setVisibility(View.VISIBLE);
-                    }
-
-                    if (deviceAddressTv != null) {
-                        deviceAddressTv.setText(btDevice.getDeviceAddress());
-                        deviceAddressTv.setVisibility(View.VISIBLE);
                     }
 
                     currentService.setBtDevice(btDevice);
 
-
+                    mScanIntervalSeekbar.setVisibility(View.VISIBLE);
+                    mWindowIntervalSeekbar.setVisibility(View.VISIBLE);
                     scanningListView.setVisibility(View.GONE);
                 }
             });
@@ -643,8 +775,6 @@ public class BtDevicesActivity extends AppCompatActivity implements IADListener,
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                lastPacketReceivedTv.setText(sf.format(time));
-                totalPacketReceiveTv.setText("" + history.size());
             }
         });
     }
@@ -659,10 +789,8 @@ public class BtDevicesActivity extends AppCompatActivity implements IADListener,
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                samplingTimeTv.setText(samplingTime + "s");
                 setData(globalPacketReceivedPerSecond, "");
                 mChart.invalidate();
-                averagePacketReceivedTv.setText("" + String.format("%.2f", averagePacket) + " in 1 second");
             }
         });
     }
@@ -692,11 +820,11 @@ public class BtDevicesActivity extends AppCompatActivity implements IADListener,
                     hideProgressBar();
                     currentService.stopScan();
                 }
+                mScanIntervalSeekbar.setVisibility(View.GONE);
+                mWindowIntervalSeekbar.setVisibility(View.GONE);
                 scanningListView.setVisibility(View.VISIBLE);
                 if (deviceNameTv != null)
                     deviceNameTv.setVisibility(View.GONE);
-                if (deviceAddressTv != null)
-                    deviceAddressTv.setVisibility(View.GONE);
             }
             return true;
         }

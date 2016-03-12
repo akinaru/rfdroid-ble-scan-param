@@ -28,5 +28,6 @@ public class JsonConstants {
     public final static String BT_ADDRESS = "address";
     public final static String BT_DEVICE_NAME = "deviceName";
     public final static String BT_ADVERTISING_INTERVAL = "advertisingInterval";
-
+    public final static String BT_SCAN_INTERVAL = "scanInterval";
+    public final static String BT_SCAN_WINDOW = "scanWindow";
 }

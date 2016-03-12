@@ -46,6 +46,8 @@ import com.neovisionaries.bluetooth.ble.advertising.ADStructure;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -290,7 +292,7 @@ public class BluetoothCustomManager implements IBluetoothCustomManager {
      * Scan new Bluetooth device
      */
     @SuppressLint("NewApi")
-    public boolean scanLeDevice() {
+    public boolean scanLeDevice(int scanIntervalMillis, int scanWindowMillis) {
 
         if (!scanning) {
 
@@ -298,7 +300,22 @@ public class BluetoothCustomManager implements IBluetoothCustomManager {
 
             scanning = true;
 
-            return mBluetoothAdapter.startLeScan(scanCallback);
+            try {
+                Method scanLeWithParameters =
+                        mBluetoothAdapter.getClass().getMethod("startLeScan", UUID[].class, int.class, int.class, Class.forName("android.bluetooth.BluetoothAdapter$LeScanCallback"));
+
+                return (Boolean) scanLeWithParameters.invoke(mBluetoothAdapter, null, scanIntervalMillis, scanWindowMillis, scanCallback);
+            } catch (NoSuchMethodException e) {
+                e.printStackTrace();
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            } catch (InvocationTargetException e) {
+                e.printStackTrace();
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+
+            return false;
         }
         return false;
     }

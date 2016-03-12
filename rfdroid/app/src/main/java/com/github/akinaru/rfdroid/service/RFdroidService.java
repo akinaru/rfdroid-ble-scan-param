@@ -325,9 +325,9 @@ public class RFdroidService extends Service implements IMeasurement {
      *
      * @return
      */
-    public boolean startScan() {
+    public boolean startScan(int scanInterval, int scanWindow) {
         setMeasurementTask();
-        return btManager.scanLeDevice();
+        return btManager.scanLeDevice(scanInterval, scanWindow);
     }
 
     /**

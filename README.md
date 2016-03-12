@@ -1,13 +1,19 @@
-# RFdroid
+# RFdroid-scanparam
 
-[![Build Status](https://travis-ci.org/akinaru/RFdroid.svg?branch=master)](https://travis-ci.org/akinaru/RFdroid)
+[![Build Status](https://travis-ci.org/akinaru/rfdroid-ble-scan-param.svg?branch=master)](https://travis-ci.org/akinaru/rfdroid-ble-scan-param)
 [![License](http://badge.kloud51.com/pypi/l/html2text.svg)](LICENSE.md)
 
-<a href="https://play.google.com/store/apps/details?id=com.github.akinaru.rfdroid">
-<img alt="Get it on Google Play" src="http://steverichey.github.io/google-play-badge-svg/img/en_get.svg" />
-</a>
+Modification of <a href="https://github.com/akinaru/RFdroid">RFdroid application</a> to be used with a patched version of AOSP plaform/base & apps/Bluetooth.
+The patch include addition of the following API : 
 
-Android app showing Bluetooth advertizing packets and measuring reception rate using one RFduino module
+in `BluetoothAdapter.java` : 
+```
+public boolean startLeScan(final UUID[] serviceUuids,int scanIntervalMillis,int scanWindow, final LeScanCallback callback) 
+```
+
+It can start a BLE scan with a specified scan interval and scan window
+
+Patch can be found <a href="https://github.com/username/repo/blob/master/patch">here</a>
 
 ![screenshot](screen/screen.gif)
 
@@ -16,9 +22,8 @@ Android app showing Bluetooth advertizing packets and measuring reception rate u
 ### Get code source
 
 ```
-git clone git@github.com:akinaru/RFdroid.git
-cd RFdroid
-git submodule update --init --recursive
+git clone git@github.com:akinaru/rfdroid-ble-scan-param.git
+cd rfdroid-ble-scan-param
 ```
 
 ### Build Android App
@@ -27,14 +32,6 @@ git submodule update --init --recursive
 ./gradlew clean build
 ```
 
-### Build & Upload RFduino software
-
-```
-make
-```
-
-refer to https://github.com/akinaru/rfduino-makefile for troubleshoot
-
 ## External projects
 
 * BLE AD frame parser : https://github.com/TakahikoKawasaki/nv-bluetooth
@@ -42,16 +39,6 @@ refer to https://github.com/akinaru/rfduino-makefile for troubleshoot
 * DiscreteSeekbar : https://github.com/AnderWeb/discreteSeekBar
 
 * MPAndroidChart : https://github.com/PhilJay/MPAndroidChart
-
-* Makefile for rfduino : https://github.com/akinaru/rfduino-makefile
-
-* RFduino : https://github.com/RFduino/RFduino
-
-## Useful links
-
-Thanks to Tolson for his Lazarus Library
-
-* http://forum.rfduino.com/index.php?topic=801.0
 
 ## License
 

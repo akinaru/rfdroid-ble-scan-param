@@ -40,21 +40,7 @@
                     android:padding="10dp"
                     android:text=""
                     android:textColor="#212121"
-                    android:textSize="32sp"
-                    android:visibility="gone" />
-
-                <TextView
-                    android:id="@+id/device_address"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif"
-                    android:gravity="center"
-                    android:paddingBottom="20dp"
-                    android:paddingLeft="10dp"
-                    android:paddingRight="10dp"
-                    android:text=""
-                    android:textColor="#212121"
-                    android:textSize="32sp"
+                    android:textSize="22sp"
                     android:visibility="gone" />
 
 
@@ -64,6 +50,67 @@
                     android:layout_height="match_parent"
                     android:choiceMode="singleChoice" />
 
+                <org.adw.library.widgets.discreteseekbar.DiscreteSeekBar
+                    android:id="@+id/scan_interval_seekbar"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingLeft="20dp"
+                    android:paddingRight="20dp"
+                    android:paddingTop="20dp"
+                    app:dsb_indicatorColor="#0288D1"
+                    app:dsb_max="500"
+                    app:dsb_min="1"
+                    app:dsb_progressColor="#0288D1"
+                    app:dsb_value="4" />
+
+                <org.adw.library.widgets.discreteseekbar.DiscreteSeekBar
+                    android:id="@+id/scan_window_seekbar"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingLeft="20dp"
+                    android:paddingRight="20dp"
+                    app:dsb_indicatorColor="#0288D1"
+                    app:dsb_max="500"
+                    app:dsb_min="1"
+                    app:dsb_progressColor="#0288D1"
+                    app:dsb_value="4" />
+
+                <TableLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <TableRow
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <Button
+                            android:id="@+id/button_stop"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="sans-serif"
+                            android:paddingBottom="5dp"
+                            android:paddingLeft="10dp"
+                            android:paddingTop="5dp"
+
+                            android:text="stop scan"
+                            android:textColor="@color/tableTextColor"
+                            android:textSize="16sp" />
+
+                        <Button
+                            android:id="@+id/button_restart_scan"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="sans-serif"
+                            android:padding="5dp"
+                            android:paddingLeft="20dp"
+                            android:text="restart scan"
+                            android:textColor="@color/tableTextColor"
+                            android:textSize="16sp" />
+                    </TableRow>
+
+                </TableLayout>
 
                 <TableLayout
                     android:id="@+id/tablelayout"
@@ -75,7 +122,7 @@
                         android:layout_height="wrap_content">
 
                         <TextView
-                            android:id="@+id/last_packet_received_label"
+                            android:id="@+id/scan_interval_label"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
@@ -84,19 +131,19 @@
                             android:paddingLeft="10dp"
                             android:paddingTop="5dp"
 
-                            android:text="last packet received"
+                            android:text="scan interval (ms)"
                             android:textColor="@color/tableTextColor"
                             android:textSize="16sp" />
 
                         <TextView
-                            android:id="@+id/last_packet_received_value"
+                            android:id="@+id/scan_interval_value"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:fontFamily="sans-serif"
                             android:padding="5dp"
                             android:paddingLeft="20dp"
-                            android:text="200ms ago"
+                            android:text=""
                             android:textColor="@color/tableTextColor"
                             android:textSize="16sp" />
                     </TableRow>
@@ -106,95 +153,30 @@
                         android:layout_height="wrap_content">
 
                         <TextView
-                            android:id="@+id/sampling_time_label"
+                            android:id="@+id/scan_window_label"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-
                             android:layout_weight="1"
                             android:fontFamily="sans-serif"
                             android:paddingBottom="5dp"
                             android:paddingLeft="10dp"
                             android:paddingTop="5dp"
-                            android:text="sampling time"
+
+                            android:text="scan window (ms)"
                             android:textColor="@color/tableTextColor"
                             android:textSize="16sp" />
 
                         <TextView
-                            android:id="@+id/sampling_time_value"
+                            android:id="@+id/scan_window_value"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:fontFamily="sans-serif"
                             android:padding="5dp"
                             android:paddingLeft="20dp"
-                            android:text="5 seconds"
+                            android:text=""
                             android:textColor="@color/tableTextColor"
                             android:textSize="16sp" />
-
-                    </TableRow>
-
-                    <TableRow
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content">
-
-                        <TextView
-                            android:id="@+id/total_packet_received_label"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-
-                            android:layout_weight="1"
-                            android:fontFamily="sans-serif"
-                            android:paddingBottom="5dp"
-                            android:paddingLeft="10dp"
-                            android:paddingTop="5dp"
-                            android:text="total packet received"
-                            android:textColor="@color/tableTextColor"
-                            android:textSize="16sp" />
-
-                        <TextView
-                            android:id="@+id/total_packet_received_value"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:fontFamily="sans-serif"
-                            android:padding="5dp"
-                            android:paddingLeft="20dp"
-                            android:text="500/600"
-                            android:textColor="@color/tableTextColor"
-                            android:textSize="16sp" />
-
-                    </TableRow>
-
-                    <TableRow
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content">
-
-                        <TextView
-                            android:id="@+id/average_packet_received_label"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:fontFamily="sans-serif"
-                            android:paddingBottom="0dp"
-                            android:paddingLeft="10dp"
-                            android:paddingTop="5dp"
-                            android:text="average packet received"
-                            android:textColor="@color/tableTextColor"
-                            android:textSize="16sp" />
-
-                        <TextView
-                            android:id="@+id/average_packet_received_value"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:fontFamily="sans-serif"
-                            android:padding="5dp"
-                            android:paddingBottom="0dp"
-                            android:paddingLeft="20dp"
-                            android:text="5/6 in 1s"
-                            android:textColor="@color/tableTextColor"
-                            android:textSize="16sp" />
-
                     </TableRow>
 
                 </TableLayout>
