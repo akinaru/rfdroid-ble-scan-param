@@ -23,8 +23,8 @@ Patches can be found <a href="https://github.com/akinaru/rfdroid-scanparam/blob/
 ### Get code source
 
 ```
-git clone git@github.com:akinaru/rfdroid-scanparam.git
-cd rfdroid-ble-scan-param
+git clone git@github.com:akinaru/rfdroid-ble-scanparam.git
+cd rfdroid-ble-scanparam
 ```
 
 ### Build Android App
