@@ -1,6 +1,6 @@
 # RFdroid-scanparam
 
-[![Build Status](https://travis-ci.org/akinaru/rfdroid-ble-scan-param.svg?branch=master)](https://travis-ci.org/akinaru/rfdroid-ble-scan-param)
+[![Build Status](https://travis-ci.org/akinaru/rfdroid-ble-scanparam.svg?branch=master)](https://travis-ci.org/akinaru/rfdroid-ble-scanparam)
 [![License](http://badge.kloud51.com/pypi/l/html2text.svg)](LICENSE.md)
 
 Modification of <a href="https://github.com/akinaru/RFdroid">RFdroid application</a> to be used with a patched version of AOSP plaform/base & apps/Bluetooth.
@@ -22,7 +22,7 @@ Patch can be found <a href="https://github.com/username/repo/blob/master/patch">
 ### Get code source
 
 ```
-git clone git@github.com:akinaru/rfdroid-ble-scan-param.git
+git clone git@github.com:akinaru/rfdroid-ble-scanparam.git
 cd rfdroid-ble-scan-param
 ```
 
