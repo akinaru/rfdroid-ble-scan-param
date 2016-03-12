@@ -8,12 +8,13 @@ The patch include addition of the following API :
 
 in `BluetoothAdapter.java` : 
 ```
-public boolean startLeScan(final UUID[] serviceUuids,int scanIntervalMillis,int scanWindow, final LeScanCallback callback) 
+public boolean startLeScan(final UUID[] serviceUuids, int scanIntervalMillis, int scanWindow, 
+							final LeScanCallback callback) 
 ```
 
 It can start a BLE scan with a specified scan interval and scan window
 
-Patch can be found <a href="https://github.com/username/repo/blob/master/patch">here</a>
+Patches can be found <a href="https://github.com/akinaru/rfdroid-ble-scanparam/blob/master/patch">here</a>
 
 ![screenshot](screen/screen.gif)
 
