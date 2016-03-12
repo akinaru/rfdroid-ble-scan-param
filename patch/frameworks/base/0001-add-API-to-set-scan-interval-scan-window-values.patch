@@ -1,0 +1,236 @@
+From c2edd2f3edd77fb29ab8a0b6b5cd1a20b076d592 Mon Sep 17 00:00:00 2001
+From: Bertrand Martel <bmartel.fr@gmail.com>
+Date: Sat, 12 Mar 2016 15:03:31 +0100
+Subject: [PATCH] add API to set scan interval/scan window values
+
+---
+ core/java/android/bluetooth/BluetoothAdapter.java  | 97 ++++++++++++++++++++++
+ core/java/android/bluetooth/IBluetoothGatt.aidl    |  5 ++
+ .../android/bluetooth/le/BluetoothLeScanner.java   | 65 ++++++++++++++-
+ 3 files changed, 166 insertions(+), 1 deletion(-)
+
+diff --git a/core/java/android/bluetooth/BluetoothAdapter.java b/core/java/android/bluetooth/BluetoothAdapter.java
+index b8f4bf8..7549283 100644
+--- a/core/java/android/bluetooth/BluetoothAdapter.java
++++ b/core/java/android/bluetooth/BluetoothAdapter.java
+@@ -1749,6 +1749,103 @@ public final class BluetoothAdapter {
+         return false;
+     }
+ 
++    /*
++     *
++     * Starts a scan for Bluetooth LE devices, looking for devices that
++     * advertise given services.
++     *
++     * <p>Devices which advertise all specified services are reported using the
++     * {@link LeScanCallback#onLeScan} callback.
++     *
++     * <p>Requires {@link android.Manifest.permission#BLUETOOTH_ADMIN} permission.
++     *
++     * @param serviceUuids Array of services to look for
++     * @param scanIntervalMillis scan interval in milliseconds
++     * @param scanWindow scan window in milliseconds
++     * @param callback the callback LE scan results are delivered
++     * @return true, if the scan was started successfully
++     * @deprecated use {@link BluetoothLeScanner#startScan(List, ScanSettings, ScanCallback)}
++     *             instead.
++     */
++    @Deprecated
++    public boolean startLeScan(final UUID[] serviceUuids,int scanIntervalMillis,int scanWindow, final LeScanCallback callback) {
++        if (DBG) Log.d(TAG, "startLeScan(): " + serviceUuids);
++        if (callback == null) {
++            if (DBG) Log.e(TAG, "startLeScan: null callback");
++            return false;
++        }
++        BluetoothLeScanner scanner = getBluetoothLeScanner();
++        if (scanner == null) {
++            if (DBG) Log.e(TAG, "startLeScan: cannot get BluetoothLeScanner");
++            return false;
++        }
++
++        synchronized(mLeScanClients) {
++            if (mLeScanClients.containsKey(callback)) {
++                if (DBG) Log.e(TAG, "LE Scan has already started");
++                return false;
++            }
++
++            try {
++                IBluetoothGatt iGatt = mManagerService.getBluetoothGatt();
++                if (iGatt == null) {
++                    // BLE is not supported
++                    return false;
++                }
++
++                ScanCallback scanCallback = new ScanCallback() {
++                    @Override
++                    public void onScanResult(int callbackType, ScanResult result) {
++                        if (callbackType != ScanSettings.CALLBACK_TYPE_ALL_MATCHES) {
++                            // Should not happen.
++                            Log.e(TAG, "LE Scan has already started");
++                            return;
++                        }
++                        ScanRecord scanRecord = result.getScanRecord();
++                        if (scanRecord == null) {
++                            return;
++                        }
++                        if (serviceUuids != null) {
++                            List<ParcelUuid> uuids = new ArrayList<ParcelUuid>();
++                            for (UUID uuid : serviceUuids) {
++                                uuids.add(new ParcelUuid(uuid));
++                            }
++                            List<ParcelUuid> scanServiceUuids = scanRecord.getServiceUuids();
++                            if (scanServiceUuids == null || !scanServiceUuids.containsAll(uuids)) {
++                                if (DBG) Log.d(TAG, "uuids does not match");
++                                return;
++                            }
++                        }
++                        callback.onLeScan(result.getDevice(), result.getRssi(),
++                                scanRecord.getBytes());
++                    }
++                };
++                /*
++                ScanSettings settings = new ScanSettings.Builder()
++                    .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
++                    .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build();
++                */
++                List<ScanFilter> filters = new ArrayList<ScanFilter>();
++                if (serviceUuids != null && serviceUuids.length > 0) {
++                    // Note scan filter does not support matching an UUID array so we put one
++                    // UUID to hardware and match the whole array in callback.
++                    ScanFilter filter = new ScanFilter.Builder().setServiceUuid(
++                            new ParcelUuid(serviceUuids[0])).build();
++                    filters.add(filter);
++                }
++                //scanner.startScan(filters, settings, scanCallback);
++                scanner.startScan(filters, scanIntervalMillis, scanWindow, scanCallback);
++
++                mLeScanClients.put(callback, scanCallback);
++                return true;
++
++            } catch (RemoteException e) {
++                Log.e(TAG,"",e);
++            }
++        }
++        return false;
++    }
++ 
+     /**
+      * Stops an ongoing Bluetooth LE device scan.
+      *
+diff --git a/core/java/android/bluetooth/IBluetoothGatt.aidl b/core/java/android/bluetooth/IBluetoothGatt.aidl
+index 7070bae..3532cdf 100644
+--- a/core/java/android/bluetooth/IBluetoothGatt.aidl
++++ b/core/java/android/bluetooth/IBluetoothGatt.aidl
+@@ -37,6 +37,11 @@ interface IBluetoothGatt {
+     void startScan(in int appIf, in boolean isServer, in ScanSettings settings,
+                    in List<ScanFilter> filters,
+                    in List scanStorages);
++
++    void startScanWithParams(in int appIf, in boolean isServer, in int scanIntervalMillis, in int scanWindowMillis,
++                   in List<ScanFilter> filters,
++                   in List scanStorages);
++
+     void stopScan(in int appIf, in boolean isServer);
+     void flushPendingBatchResults(in int appIf, in boolean isServer);
+     void startMultiAdvertising(in int appIf,
+diff --git a/core/java/android/bluetooth/le/BluetoothLeScanner.java b/core/java/android/bluetooth/le/BluetoothLeScanner.java
+index 93ea299..85b811b 100644
+--- a/core/java/android/bluetooth/le/BluetoothLeScanner.java
++++ b/core/java/android/bluetooth/le/BluetoothLeScanner.java
+@@ -135,6 +135,50 @@ public final class BluetoothLeScanner {
+     }
+ 
+     /**
++     * 
++     * Start Bluetooth LE scan. The scan results will be delivered through {@code callback}.
++     * <p>
++     * Requires {@link android.Manifest.permission#BLUETOOTH_ADMIN} permission.
++     *
++     * @param filters {@link ScanFilter}s for finding exact BLE devices.
++     * @param scanIntervalMillis scan interval in milliseconds
++     * @param scanWindowMillis scan window in milliseconds
++     * @param callback Callback used to deliver scan results.
++     * @throws IllegalArgumentException If {@code callback} is null.
++     */
++    public void startScan(List<ScanFilter> filters, int scanIntervalMillis, int scanWindowMillis,
++            final ScanCallback callback) {
++        startScan(filters, scanIntervalMillis,scanWindowMillis, callback, null);
++    }
++
++    private void startScan(List<ScanFilter> filters, int scanIntervalMillis, int scanWindowMillis,
++            final ScanCallback callback, List<List<ResultStorageDescriptor>> resultStorages) {
++        BluetoothLeUtils.checkAdapterStateOn(mBluetoothAdapter);
++        if (callback == null) {
++            throw new IllegalArgumentException("settings or callback is null");
++        }
++        synchronized (mLeScanClients) {
++            if (mLeScanClients.containsKey(callback)) {
++                postCallbackError(callback, ScanCallback.SCAN_FAILED_ALREADY_STARTED);
++                return;
++            }
++            IBluetoothGatt gatt;
++            try {
++                gatt = mBluetoothManager.getBluetoothGatt();
++            } catch (RemoteException e) {
++                gatt = null;
++            }
++            if (gatt == null) {
++                postCallbackError(callback, ScanCallback.SCAN_FAILED_INTERNAL_ERROR);
++                return;
++            }
++            BleScanCallbackWrapper wrapper = new BleScanCallbackWrapper(gatt, filters,
++                    scanIntervalMillis, scanWindowMillis, callback, resultStorages);
++            wrapper.startRegisteration();
++        }
++    }
++
++    /**
+      * Stops an ongoing Bluetooth LE scan.
+      * <p>
+      * Requires {@link android.Manifest.permission#BLUETOOTH_ADMIN} permission.
+@@ -212,6 +256,8 @@ public final class BluetoothLeScanner {
+         private final ScanCallback mScanCallback;
+         private final List<ScanFilter> mFilters;
+         private ScanSettings mSettings;
++        private int mScanIntervalMillis;
++        private int mScanWindowMillis;
+         private IBluetoothGatt mBluetoothGatt;
+         private List<List<ResultStorageDescriptor>> mResultStorages;
+ 
+@@ -231,6 +277,18 @@ public final class BluetoothLeScanner {
+             mResultStorages = resultStorages;
+         }
+ 
++        public BleScanCallbackWrapper(IBluetoothGatt bluetoothGatt,
++                List<ScanFilter> filters, int scanIntervalMillis, int scanWindowMillis,
++                ScanCallback scanCallback, List<List<ResultStorageDescriptor>> resultStorages) {
++            mBluetoothGatt = bluetoothGatt;
++            mFilters = filters;
++            mScanIntervalMillis = scanIntervalMillis;
++            mScanWindowMillis = scanWindowMillis;
++            mScanCallback = scanCallback;
++            mClientIf = 0;
++            mResultStorages = resultStorages;
++        }
++
+         public void startRegisteration() {
+             synchronized (this) {
+                 // Scan stopped.
+@@ -297,8 +355,13 @@ public final class BluetoothLeScanner {
+                 if (status == BluetoothGatt.GATT_SUCCESS) {
+                     mClientIf = clientIf;
+                     try {
+-                        mBluetoothGatt.startScan(mClientIf, false, mSettings, mFilters,
++                       if (mSettings != null){
++                            mBluetoothGatt.startScan(mClientIf, false, mSettings, mFilters,
+                                 mResultStorages);
++                        }
++                        else {
++                            mBluetoothGatt.startScanWithParams(mClientIf, false, mScanIntervalMillis, mScanWindowMillis, mFilters, mResultStorages);
++                        }
+                     } catch (RemoteException e) {
+                         Log.e(TAG, "fail to start le scan: " + e);
+                         mClientIf = -1;
+-- 
+2.5.0
+

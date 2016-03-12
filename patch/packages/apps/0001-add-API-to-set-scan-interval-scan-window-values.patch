@@ -1,0 +1,272 @@
+From 07dc259c2a3f8ce5dbcd4c6f8703670fe9d7fb2c Mon Sep 17 00:00:00 2001
+From: Bertrand Martel <bmartel.fr@gmail.com>
+Date: Sat, 12 Mar 2016 15:01:32 +0100
+Subject: [PATCH] add API to set scan interval/scan window values
+
+---
+ src/com/android/bluetooth/gatt/GattService.java | 45 ++++++++---
+ src/com/android/bluetooth/gatt/ScanClient.java  | 18 +++++
+ src/com/android/bluetooth/gatt/ScanManager.java | 99 +++++++++++++++++--------
+ 3 files changed, 120 insertions(+), 42 deletions(-)
+
+diff --git a/src/com/android/bluetooth/gatt/GattService.java b/src/com/android/bluetooth/gatt/GattService.java
+index c428cf8..0166419 100644
+--- a/src/com/android/bluetooth/gatt/GattService.java
++++ b/src/com/android/bluetooth/gatt/GattService.java
+@@ -310,6 +310,14 @@ public class GattService extends ProfileService {
+             service.startScan(appIf, isServer, settings, filters, storages);
+         }
+ 
++        @Override
++        public void startScanWithParams(int appIf, boolean isServer, int scanIntervalMillis, int scanWindowMillis,
++                List<ScanFilter> filters, List storages) {
++            GattService service = getService();
++            if (service == null) return;
++            service.startScan(appIf, isServer, scanIntervalMillis, scanWindowMillis, filters, storages);
++        }
++
+         public void stopScan(int appIf, boolean isServer) {
+             GattService service = getService();
+             if (service == null) return;
+@@ -582,20 +590,26 @@ public class GattService extends ProfileService {
+                     if (matchesFilters(client, result)) {
+                         try {
+                             ScanSettings settings = client.settings;
+-                            // framework detects the first match, hw signal is
+-                            // used to detect the onlost
+-                            // ToDo: make scanClient+result, 1 to many when hw
+-                            // support is available
+-                            if ((settings.getCallbackType() &
+-                                    ScanSettings.CALLBACK_TYPE_FIRST_MATCH) != 0) {
+-                                synchronized (mOnFoundResults) {
+-                                    mOnFoundResults.put(client, result);
++
++                            if (settings != null) {
++                                // framework detects the first match, hw signal is
++                                // used to detect the onlost
++                                // ToDo: make scanClient+result, 1 to many when hw
++                                // support is available
++                                if ((settings.getCallbackType() &
++                                        ScanSettings.CALLBACK_TYPE_FIRST_MATCH) != 0) {
++                                    synchronized (mOnFoundResults) {
++                                        mOnFoundResults.put(client, result);
++                                    }
++                                    app.callback.onFoundOrLost(true, result);
++                                }
++                                if ((settings.getCallbackType() &
++                                        ScanSettings.CALLBACK_TYPE_ALL_MATCHES) != 0) {
++                                    app.callback.onScanResult(result);
+                                 }
+-                                app.callback.onFoundOrLost(true, result);
+                             }
+-                            if ((settings.getCallbackType() &
+-                                    ScanSettings.CALLBACK_TYPE_ALL_MATCHES) != 0) {
+-                                app.callback.onScanResult(result);
++                            else {
++                                 app.callback.onScanResult(result);
+                             }
+                         } catch (RemoteException e) {
+                             Log.e(TAG, "Exception: " + e);
+@@ -1316,6 +1330,13 @@ public class GattService extends ProfileService {
+         mScanManager.startScan(new ScanClient(appIf, isServer, settings, filters, storages));
+     }
+ 
++    void startScan(int appIf, boolean isServer, int scanIntervalMillis, int scanWindowMillis,
++            List<ScanFilter> filters, List<List<ResultStorageDescriptor>> storages) {
++        if (DBG) Log.d(TAG, "start scan with filters");
++        enforceAdminPermission();
++        mScanManager.startScan(new ScanClient(appIf, isServer, scanIntervalMillis, scanWindowMillis, filters, storages));
++    }
++
+     void flushPendingBatchResults(int clientIf, boolean isServer) {
+         if (DBG) Log.d(TAG, "flushPendingBatchResults - clientIf=" + clientIf +
+                 ", isServer=" + isServer);
+diff --git a/src/com/android/bluetooth/gatt/ScanClient.java b/src/com/android/bluetooth/gatt/ScanClient.java
+index 3f2863f..9b958ea 100644
+--- a/src/com/android/bluetooth/gatt/ScanClient.java
++++ b/src/com/android/bluetooth/gatt/ScanClient.java
+@@ -34,6 +34,8 @@ import java.util.UUID;
+     boolean isServer;
+     UUID[] uuids;
+     ScanSettings settings;
++    int scanIntervalMillis;
++    int scanWindowMillis;
+     List<ScanFilter> filters;
+     List<List<ResultStorageDescriptor>> storages;
+     // App associated with the scan client died.
+@@ -60,6 +62,11 @@ import java.util.UUID;
+         this(appIf, isServer, new UUID[0], settings, filters, storages);
+     }
+ 
++    ScanClient(int appIf, boolean isServer, int scanIntervalMillis, int scanWindowMillis,
++            List<ScanFilter> filters, List<List<ResultStorageDescriptor>> storages) {
++        this(appIf, isServer, new UUID[0], scanIntervalMillis, scanWindowMillis, filters, storages);
++    }
++
+     private ScanClient(int appIf, boolean isServer, UUID[] uuids, ScanSettings settings,
+             List<ScanFilter> filters, List<List<ResultStorageDescriptor>> storages) {
+         this.clientIf = appIf;
+@@ -70,6 +77,17 @@ import java.util.UUID;
+         this.storages = storages;
+     }
+ 
++    private ScanClient(int appIf, boolean isServer, UUID[] uuids, int scanIntervalMillis, int scanWindowMillis,
++            List<ScanFilter> filters, List<List<ResultStorageDescriptor>> storages) {
++        this.clientIf = appIf;
++        this.isServer = isServer;
++        this.uuids = uuids;
++        this.scanIntervalMillis = scanIntervalMillis;
++        this.scanWindowMillis = scanWindowMillis;
++        this.filters = filters;
++        this.storages = storages;
++    }
++
+     @Override
+     public boolean equals(Object obj) {
+         if (this == obj) {
+diff --git a/src/com/android/bluetooth/gatt/ScanManager.java b/src/com/android/bluetooth/gatt/ScanManager.java
+index af5eeb0..4e1ffde 100644
+--- a/src/com/android/bluetooth/gatt/ScanManager.java
++++ b/src/com/android/bluetooth/gatt/ScanManager.java
+@@ -384,7 +384,13 @@ public class ScanManager {
+             int curScanSetting = Integer.MIN_VALUE;
+             ScanClient client = getAggressiveClient(mRegularScanClients);
+             if (client != null) {
+-                curScanSetting = client.settings.getScanMode();
++
++                if (client.settings != null) {
++                    curScanSetting = client.settings.getScanMode();
++                }
++                else{
++                    curScanSetting = ScanSettings.SCAN_MODE_LOW_POWER;
++                }
+             }
+ 
+             logd("configureRegularScanParams() - ScanSetting Scan mode=" + curScanSetting +
+@@ -393,28 +399,37 @@ public class ScanManager {
+             if (curScanSetting != Integer.MIN_VALUE) {
+                 if (curScanSetting != mLastConfiguredScanSetting) {
+                     int scanWindow, scanInterval;
+-                    switch (curScanSetting) {
+-                        case ScanSettings.SCAN_MODE_LOW_POWER:
+-                            scanWindow = SCAN_MODE_LOW_POWER_WINDOW_MS;
+-                            scanInterval = SCAN_MODE_LOW_POWER_INTERVAL_MS;
+-                            break;
+-                        case ScanSettings.SCAN_MODE_BALANCED:
+-                            scanWindow = SCAN_MODE_BALANCED_WINDOW_MS;
+-                            scanInterval = SCAN_MODE_BALANCED_INTERVAL_MS;
+-                            break;
+-                        case ScanSettings.SCAN_MODE_LOW_LATENCY:
+-                            scanWindow = SCAN_MODE_LOW_LATENCY_WINDOW_MS;
+-                            scanInterval = SCAN_MODE_LOW_LATENCY_INTERVAL_MS;
+-                            break;
+-                        default:
+-                            Log.e(TAG, "Invalid value for curScanSetting " + curScanSetting);
+-                            scanWindow = SCAN_MODE_LOW_POWER_WINDOW_MS;
+-                            scanInterval = SCAN_MODE_LOW_POWER_INTERVAL_MS;
+-                            break;
++
++                    if (client.settings != null){
++
++                        switch (curScanSetting) {
++                            case ScanSettings.SCAN_MODE_LOW_POWER:
++                                scanWindow = SCAN_MODE_LOW_POWER_WINDOW_MS;
++                                scanInterval = SCAN_MODE_LOW_POWER_INTERVAL_MS;
++                                break;
++                            case ScanSettings.SCAN_MODE_BALANCED:
++                                scanWindow = SCAN_MODE_BALANCED_WINDOW_MS;
++                                scanInterval = SCAN_MODE_BALANCED_INTERVAL_MS;
++                                break;
++                            case ScanSettings.SCAN_MODE_LOW_LATENCY:
++                                scanWindow = SCAN_MODE_LOW_LATENCY_WINDOW_MS;
++                                scanInterval = SCAN_MODE_LOW_LATENCY_INTERVAL_MS;
++                                break;
++                            default:
++                                Log.e(TAG, "Invalid value for curScanSetting " + curScanSetting);
++                                scanWindow = SCAN_MODE_LOW_POWER_WINDOW_MS;
++                                scanInterval = SCAN_MODE_LOW_POWER_INTERVAL_MS;
++                                break;
++                        }
++                        // convert scanWindow and scanInterval from ms to LE scan units(0.625ms)
++                        scanWindow = Utils.millsToUnit(scanWindow);
++                        scanInterval = Utils.millsToUnit(scanInterval);
++                    }
++                    else{
++                        scanWindow = Utils.millsToUnit(client.scanWindowMillis);
++                        scanInterval = Utils.millsToUnit(client.scanIntervalMillis);
+                     }
+-                    // convert scanWindow and scanInterval from ms to LE scan units(0.625ms)
+-                    scanWindow = Utils.millsToUnit(scanWindow);
+-                    scanInterval = Utils.millsToUnit(scanInterval);
++
+                     gattClientScanNative(false);
+                     gattSetScanParametersNative(scanInterval, scanWindow);
+                     gattClientScanNative(true);
+@@ -432,9 +447,15 @@ public class ScanManager {
+             for (ScanClient client : cList) {
+                 // ScanClient scan settings are assumed to be monotonically increasing in value for
+                 // more power hungry(higher duty cycle) operation.
+-                if (client.settings.getScanMode() > curScanSetting) {
++                if (client.settings != null){
++                    if (client.settings.getScanMode() > curScanSetting) {
++                        result = client;
++                        curScanSetting = client.settings.getScanMode();
++                    }
++                }
++                else{
+                     result = client;
+-                    curScanSetting = client.settings.getScanMode();
++                    curScanSetting = ScanSettings.SCAN_MODE_LOW_POWER;
+                 }
+             }
+             return result;
+@@ -488,10 +509,20 @@ public class ScanManager {
+                         100 - fullScanPercent, notifyThreshold);
+                 waitForCallback();
+                 resetCountDownLatch();
+-                int scanInterval =
++                int scanInterval;
++                int scanWindow;
++
++                if (client.settings != null){
++                    scanInterval =
+                         Utils.millsToUnit(getBatchScanIntervalMillis(batchScanParams.scanMode));
+-                int scanWindow =
++                    scanWindow =
+                         Utils.millsToUnit(getBatchScanWindowMillis(batchScanParams.scanMode));
++                }
++                else {
++                    scanInterval = Utils.millsToUnit(client.scanIntervalMillis);
++                    scanWindow = Utils.millsToUnit(client.scanWindowMillis);
++                }
++
+                 gattClientStartBatchScanNative(clientIf, resultType, scanInterval,
+                         scanWindow, 0, DISCARD_OLDEST_WHEN_BUFFER_FULL);
+                 waitForCallback();
+@@ -521,11 +552,19 @@ public class ScanManager {
+             // TODO: split full batch scan results and truncated batch scan results to different
+             // collections.
+             for (ScanClient client : mBatchClients) {
+-                params.scanMode = Math.max(params.scanMode, client.settings.getScanMode());
+-                if (client.settings.getScanResultType() == ScanSettings.SCAN_RESULT_TYPE_FULL) {
++
++                if (client.settings!=null){
++
++                    params.scanMode = Math.max(params.scanMode, client.settings.getScanMode());
++                    if (client.settings.getScanResultType() == ScanSettings.SCAN_RESULT_TYPE_FULL) {
++                        params.fullScanClientIf = client.clientIf;
++                    } else {
++                        params.truncatedScanClientIf = client.clientIf;
++                    }
++                }
++                else{
++                    params.scanMode = ScanSettings.SCAN_MODE_LOW_POWER;
+                     params.fullScanClientIf = client.clientIf;
+-                } else {
+-                    params.truncatedScanClientIf = client.clientIf;
+                 }
+             }
+             return params;
+-- 
+2.5.0
+
