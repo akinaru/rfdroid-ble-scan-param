@@ -1,9 +1,9 @@
 # RFdroid-scanparam
 
-[![Build Status](https://travis-ci.org/akinaru/rfdroid-scanparam.svg?branch=master)](https://travis-ci.org/akinaru/rfdroid-scanparam)
+[![Build Status](https://travis-ci.org/bertrandmartel/rfdroid-scanparam.svg?branch=master)](https://travis-ci.org/bertrandmartel/rfdroid-scanparam)
 [![License](http://badge.kloud51.com/pypi/l/html2text.svg)](LICENSE.md)
 
-Modification of <a href="https://github.com/akinaru/RFdroid">RFdroid application</a> to be used with a patched version of AOSP `frameworks/base` & `packages/apps/Bluetooth`. 
+Modification of <a href="https://github.com/bertrandmartel/RFdroid">RFdroid application</a> to be used with a patched version of AOSP `frameworks/base` & `packages/apps/Bluetooth`. 
 
 * This patch is working for API 21+ (tested on branch `android-5.1.1_r30`)
 * The patch include addition of the following API : 
@@ -16,7 +16,7 @@ public boolean startLeScan(final UUID[] serviceUuids, int scanIntervalMillis, in
 
 It can start a BLE scan with a specified scan interval and scan window
 
-Patches can be found <a href="https://github.com/akinaru/rfdroid-scanparam/blob/master/patch">here</a>
+Patches can be found <a href="https://github.com/bertrandmartel/rfdroid-scanparam/blob/master/patch">here</a>
 
 ![screenshot](screen/screenshot.gif)
 
@@ -25,7 +25,7 @@ Patches can be found <a href="https://github.com/akinaru/rfdroid-scanparam/blob/
 ### Get code source
 
 ```
-git clone git@github.com:akinaru/rfdroid-ble-scanparam.git
+git clone git@github.com:bertrandmartel/rfdroid-ble-scanparam.git
 cd rfdroid-ble-scanparam
 ```
 
